@@ -1,25 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "./components/Button";
 import { Input } from "./components/Input";
-import { appBackend, mockAdminSession, sourceTranslation } from "./services/backend";
+import { appBackend, sourceTranslation } from "./services/backend";
 import type { AppData, Category, Dish, DishInput, Ingredient, ItemKind, Language, Recipe, RecipeInput, Translation } from "./types";
 import styles from "./App.module.css";
 
 type Tab = "home" | "dishes" | "recipes";
-type FormMode = "recipe" | "dish" | "edit-recipe" | null;
+type FormMode = "recipe" | "dish" | "edit-recipe" | "edit-dish" | null;
 
 const UI: Record<Language, Record<string, string>> = {
-  cs: { home: "Domů", dishes: "Jídla", recipes: "Recepty", search: "Hledat jídlo nebo recept…", addDish: "＋ Přidat jídlo", addRecipe: "＋ Přidat recept", photoRecipe: "📷 Recept z fotky", photoProcessing: "📷 Připravuji…", translate: "Přeložit", back: "← Zpět", ingredients: "Ingredience", technology: "Technologie", components: "Komponenty", print: "Tisk", printAll: "Tisk celé databáze", categories: "KATEGORIE", newRecipe: "Nový recept", newDish: "Nové jídlo", editRecipe: "Upravit recept", editDish: "Upravit jídlo", cancel: "Zrušit", name: "Název", station: "Stanice", save: "Uložit", logout: "Odhlásit", delete: "Smazat", confirm: "Opravdu chcete tuto položku smazat?", translateConfirm: "Přeložit celou databázi do ruštiny, ukrajinštiny a angličtiny?", loading: "Načítám databázi…", signedOut: "Náhled odhlášen", continue: "Pokračovat do náhledu", all: "Vše", searchHint: "Výsledky hledání", critical: "KRITICKÉ BODY", service: "PEČENÍ / SERVIS" },
-  ru: { home: "Главная", dishes: "Блюда", recipes: "Рецепты", search: "Поиск блюда или рецепта…", addDish: "＋ Добавить блюдо", addRecipe: "＋ Добавить рецепт", photoRecipe: "📷 Рецепт по фото", photoProcessing: "📷 Подготовка…", translate: "Перевести", back: "← Назад", ingredients: "Ингредиенты", technology: "Технология", components: "Компоненты", print: "Печать", printAll: "Печать всей базы", categories: "КАТЕГОРИИ", newRecipe: "Новый рецепт", newDish: "Новое блюдо", editRecipe: "Редактировать рецепт", editDish: "Редактировать блюдо", cancel: "Отмена", name: "Название", station: "Станция", save: "Сохранить", logout: "Выйти", delete: "Удалить", confirm: "Точно удалить этот объект?", translateConfirm: "Перевести всю базу на русский, украинский и английский?", loading: "Загружаю базу…", signedOut: "Вы вышли из предпросмотра", continue: "Продолжить в предпросмотре", all: "Все", searchHint: "Результаты поиска", critical: "КРИТИЧЕСКИЕ МОМЕНТЫ", service: "ВЫПЕЧКА / СЕРВИС" },
-  uk: { home: "Головна", dishes: "Страви", recipes: "Рецепти", search: "Пошук страви або рецепта…", addDish: "＋ Додати страву", addRecipe: "＋ Додати рецепт", photoRecipe: "📷 Рецепт за фото", photoProcessing: "📷 Підготовка…", translate: "Перекласти", back: "← Назад", ingredients: "Інгредієнти", technology: "Технологія", components: "Компоненти", print: "Друк", printAll: "Друк усієї бази", categories: "КАТЕГОРІЇ", newRecipe: "Новий рецепт", newDish: "Нова страва", editRecipe: "Редагувати рецепт", editDish: "Редагувати страву", cancel: "Скасувати", name: "Назва", station: "Станція", save: "Зберегти", logout: "Вийти", delete: "Видалити", confirm: "Точно видалити цей об'єкт?", translateConfirm: "Перекласти всю базу російською, українською та англійською?", loading: "Завантажую базу…", signedOut: "Ви вийшли з попереднього перегляду", continue: "Продовжити попередній перегляд", all: "Усі", searchHint: "Результати пошуку", critical: "КРИТИЧНІ МОМЕНТИ", service: "ВИПІКАННЯ / СЕРВІС" },
-  en: { home: "Home", dishes: "Dishes", recipes: "Recipes", search: "Search dish or recipe…", addDish: "＋ Add dish", addRecipe: "＋ Add recipe", photoRecipe: "📷 Recipe from photo", photoProcessing: "📷 Preparing…", translate: "Translate", back: "← Back", ingredients: "Ingredients", technology: "Technology", components: "Components", print: "Print", printAll: "Print entire database", categories: "CATEGORIES", newRecipe: "New recipe", newDish: "New dish", editRecipe: "Edit recipe", editDish: "Edit dish", cancel: "Cancel", name: "Name", station: "Station", save: "Save", logout: "Log out", delete: "Delete", confirm: "Delete this item?", translateConfirm: "Translate the entire database into Russian, Ukrainian and English?", loading: "Loading database…", signedOut: "Preview signed out", continue: "Continue to preview", all: "All", searchHint: "Search results", critical: "CRITICAL POINTS", service: "BAKING / SERVICE" },
+  cs: { home: "Domů", dishes: "Jídla", recipes: "Recepty", search: "Hledat jídlo nebo recept…", addDish: "＋ Přidat jídlo", addRecipe: "＋ Přidat recept", photoRecipe: "📷 Recept z fotky", photoProcessing: "📷 Připravuji…", translate: "Přeložit", back: "← Zpět", ingredients: "Ingredience", technology: "Technologie", components: "Komponenty", print: "Tisk", printAll: "Tisk celé databáze", categories: "KATEGORIE", newRecipe: "Nový recept", newDish: "Nové jídlo", editRecipe: "Upravit recept", editDish: "Upravit jídlo", cancel: "Zrušit", name: "Název", station: "Stanice", save: "Uložit", logout: "Odhlásit", delete: "Smazat", confirm: "Opravdu chcete tuto položku smazat?", translateConfirm: "Přeložit celou databázi do ruštiny, ukrajinštiny a angličtiny?", loading: "Načítám databázi…", signedOut: "Přihlášení", continue: "Přihlásit se", email: "E-mail", password: "Heslo", all: "Vše", searchHint: "Výsledky hledání", critical: "KRITICKÉ BODY", service: "PEČENÍ / SERVIS" },
+  ru: { home: "Главная", dishes: "Блюда", recipes: "Рецепты", search: "Поиск блюда или рецепта…", addDish: "＋ Добавить блюдо", addRecipe: "＋ Добавить рецепт", photoRecipe: "📷 Рецепт по фото", photoProcessing: "📷 Подготовка…", translate: "Перевести", back: "← Назад", ingredients: "Ингредиенты", technology: "Технология", components: "Компоненты", print: "Печать", printAll: "Печать всей базы", categories: "КАТЕГОРИИ", newRecipe: "Новый рецепт", newDish: "Новое блюдо", editRecipe: "Редактировать рецепт", editDish: "Редактировать блюдо", cancel: "Отмена", name: "Название", station: "Станция", save: "Сохранить", logout: "Выйти", delete: "Удалить", confirm: "Точно удалить этот объект?", translateConfirm: "Перевести всю базу на русский, украинский и английский?", loading: "Загружаю базу…", signedOut: "Вход в LET’S COOK", continue: "Войти", email: "Электронная почта", password: "Пароль", all: "Все", searchHint: "Результаты поиска", critical: "КРИТИЧЕСКИЕ МОМЕНТЫ", service: "ВЫПЕЧКА / СЕРВИС" },
+  uk: { home: "Головна", dishes: "Страви", recipes: "Рецепти", search: "Пошук страви або рецепта…", addDish: "＋ Додати страву", addRecipe: "＋ Додати рецепт", photoRecipe: "📷 Рецепт за фото", photoProcessing: "📷 Підготовка…", translate: "Перекласти", back: "← Назад", ingredients: "Інгредієнти", technology: "Технологія", components: "Компоненти", print: "Друк", printAll: "Друк усієї бази", categories: "КАТЕГОРІЇ", newRecipe: "Новий рецепт", newDish: "Нова страва", editRecipe: "Редагувати рецепт", editDish: "Редагувати страву", cancel: "Скасувати", name: "Назва", station: "Станція", save: "Зберегти", logout: "Вийти", delete: "Видалити", confirm: "Точно видалити цей об'єкт?", translateConfirm: "Перекласти всю базу російською, українською та англійською?", loading: "Завантажую базу…", signedOut: "Вхід до LET’S COOK", continue: "Увійти", email: "Електронна пошта", password: "Пароль", all: "Усі", searchHint: "Результати пошуку", critical: "КРИТИЧНІ МОМЕНТИ", service: "ВИПІКАННЯ / СЕРВІС" },
+  en: { home: "Home", dishes: "Dishes", recipes: "Recipes", search: "Search dish or recipe…", addDish: "＋ Add dish", addRecipe: "＋ Add recipe", photoRecipe: "📷 Recipe from photo", photoProcessing: "📷 Preparing…", translate: "Translate", back: "← Back", ingredients: "Ingredients", technology: "Technology", components: "Components", print: "Print", printAll: "Print entire database", categories: "CATEGORIES", newRecipe: "New recipe", newDish: "New dish", editRecipe: "Edit recipe", editDish: "Edit dish", cancel: "Cancel", name: "Name", station: "Station", save: "Save", logout: "Log out", delete: "Delete", confirm: "Delete this item?", translateConfirm: "Translate the entire database into Russian, Ukrainian and English?", loading: "Loading database…", signedOut: "Sign in to LET’S COOK", continue: "Sign in", email: "Email", password: "Password", all: "All", searchHint: "Search results", critical: "CRITICAL POINTS", service: "BAKING / SERVICE" },
 };
 
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 const emptyData: AppData = { recipes: [], menuItems: [], categories: [] };
 
 export default function App() {
-  const [signedIn, setSignedIn] = useState(() => mockAdminSession.get());
+  const [signedIn, setSignedIn] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const [lang, setLang] = useState<Language>("ru");
   const [data, setData] = useState<AppData>(emptyData);
   const [loaded, setLoaded] = useState(false);
@@ -45,17 +49,33 @@ export default function App() {
   const [touchX, setTouchX] = useState<number | null>(null);
   const photoInput = useRef<HTMLInputElement>(null);
   const t = UI[lang];
+  const q = normalize(query);
 
   useEffect(() => {
-    appBackend.load().then(setData).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Could not load preview data")).finally(() => setLoaded(true));
+    let active = true;
+    appBackend.currentSession()
+      .then((user) => { if (active && user) setSignedIn(true); })
+      .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "Could not check session"); })
+      .finally(() => { if (active) setAuthChecked(true); });
+    return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!signedIn) { setLoaded(false); return; }
+    let active = true;
+    setLoaded(false);
+    appBackend.load(q || undefined, category === "Все" ? undefined : category)
+      .then((nextData) => { if (active) setData(nextData); })
+      .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "Could not load data"); })
+      .finally(() => { if (active) setLoaded(true); });
+    return () => { active = false; };
+  }, [signedIn, q, category]);
 
   const tr = (item: Recipe | Dish): Translation => {
     const base = sourceTranslation(item);
     return lang === "cs" ? base : { ...base, ...(item.translations?.[lang] ?? {}) };
   };
   const categoryOptions = (kind: ItemKind) => data.categories.filter((item) => item.kind === kind).sort((a, b) => a.sortOrder - b.sortOrder);
-  const q = normalize(query);
   const filteredRecipes = useMemo(() => data.recipes.filter((item) => !q || [item.name, ...Object.values(item.translations).map((translation) => translation?.name ?? "")].some((value) => normalize(value).includes(q))), [data.recipes, q]);
   const filteredDishes = useMemo(() => data.menuItems.filter((item) => !q || [item.name, ...Object.values(item.translations).map((translation) => translation?.name ?? "")].some((value) => normalize(value).includes(q))), [data.menuItems, q]);
   const categoryDishes = useMemo(() => (category === "Все" ? filteredDishes : filteredDishes.filter((item) => item.section === category)).slice().sort((a, b) => (tr(a).name ?? a.name).localeCompare(tr(b).name ?? b.name, lang)), [category, filteredDishes, lang]);
@@ -72,6 +92,28 @@ export default function App() {
     setFormMode("edit-recipe"); setName(recipe.name); setSection(recipe.section ?? "Dezerty"); setStation(recipe.station ?? "");
     setIngredients(recipe.ingredients.map((item) => `${item.item}|${item.amount}`).join("\n"));
     setSteps(recipe.steps.join("\n")); setCriticalPoints(recipe.criticalPoints.join("\n")); setServingNotes(recipe.servingNotes ?? "");
+  };
+  const beginEditDish = (dish: Dish) => {
+    setFormMode("edit-dish"); setName(dish.name); setSection(dish.section ?? "Dezerty");
+    setComponents(dish.components.join("\n"));
+  };
+
+  const login = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAuthBusy(true); setError("");
+    try {
+      await appBackend.login(loginEmail.trim(), loginPassword);
+      setLoginPassword(""); setSignedIn(true);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Sign in failed"); }
+    finally { setAuthBusy(false); }
+  };
+
+  const logout = async () => {
+    setAuthBusy(true); setError("");
+    try {
+      await appBackend.logout(); setSignedIn(false); setData(emptyData); setSelectedDish(null); setSelectedRecipe(null);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Sign out failed"); }
+    finally { setAuthBusy(false); }
   };
   const handlePhoto = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]; event.target.value = "";
@@ -105,13 +147,14 @@ export default function App() {
         setData((current) => ({ ...current, recipes: old ? current.recipes.map((item) => item.id === saved.id ? saved : item) : [...current.recipes, saved] }));
         setSelectedRecipe(saved); setSelectedDish(null); setTab("recipes"); setFormMode(null);
       } else {
+        const oldDish = formMode === "edit-dish" ? selectedDish : null;
         const input: DishInput = {
           name: name.trim(), section,
           components: components.split("\n").map((line) => line.trim()).filter(Boolean),
-          translations: {}, photoUrl: null,
+          week: oldDish?.week ?? null, translations: oldDish?.translations ?? {}, photoUrl: oldDish?.photoUrl ?? null,
         };
-        const saved = await appBackend.saveDish(input);
-        setData((current) => ({ ...current, menuItems: [...current.menuItems, saved] }));
+        const saved = await appBackend.saveDish(input, oldDish?.id);
+        setData((current) => ({ ...current, menuItems: oldDish ? current.menuItems.map((item) => item.id === saved.id ? saved : item) : [...current.menuItems, saved] }));
         setSelectedDish(saved); setSelectedRecipe(null); setTab("dishes"); setFormMode(null);
       }
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Save failed"); }
@@ -176,7 +219,14 @@ export default function App() {
     setPrintMode(null);
   }, [printMode, selectedRecipe, selectedDish, tab, category, lang, data, categoryRecipes, categoryDishes]);
 
-  if (!signedIn) return <div className={styles.signedOut}><div className={styles.loginCard}><div className={styles.logo}>LET’S<br /><span>COOK</span></div><h1>{t.signedOut}</h1><p>Frontend preview uses a temporary local admin session.</p><Button className={styles.saveButton} onClick={() => void mockAdminSession.continuePreview().then(() => setSignedIn(true))}>{t.continue}</Button></div></div>;
+  if (!authChecked) return <div className={styles.signedOut}><div className={styles.loginCard}><div className={styles.logo}>LET’S<br /><span>COOK</span></div><p>{t.loading}</p></div></div>;
+  if (!signedIn) return <div className={styles.signedOut}><form className={styles.loginCard} onSubmit={(event) => void login(event)}>
+    <div className={styles.logo}>LET’S<br /><span>COOK</span></div><h1>{t.signedOut}</h1>
+    <label className={styles.fieldLabel}>{t.email}<Input type="email" autoComplete="username" required value={loginEmail} onChange={(event) => setLoginEmail(event.target.value)} /></label>
+    <label className={styles.fieldLabel}>{t.password}<Input type="password" autoComplete="current-password" required value={loginPassword} onChange={(event) => setLoginPassword(event.target.value)} /></label>
+    {error && <div className={styles.error} role="alert">{error}</div>}
+    <button className={styles.saveButton} type="submit" disabled={authBusy || !loginEmail || !loginPassword}>{authBusy ? "…" : t.continue}</button>
+  </form></div>;
 
   return <div className={styles.app} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
     <nav className={styles.nav}>
@@ -187,7 +237,7 @@ export default function App() {
     </nav>
     <header className={styles.header}>
       <div className={styles.brand}><div className={styles.logo}><span>LET’S</span><span>COOK</span></div></div>
-      <div className={styles.headerRight}><div className={styles.count}>{data.recipes.length} · {data.menuItems.length}</div><button className={styles.translateButton} disabled={translationBusy} onClick={() => void translateAll()}>{translationBusy ? "🌐 …" : `🌐 ${t.translate}`}</button><button className={styles.logoutButton} onClick={() => void mockAdminSession.logout().then(() => setSignedIn(false))}>{t.logout}</button></div>
+      <div className={styles.headerRight}><div className={styles.count}>{data.recipes.length} · {data.menuItems.length}</div><button className={styles.translateButton} disabled={translationBusy} onClick={() => void translateAll()}>{translationBusy ? "🌐 …" : `🌐 ${t.translate}`}</button><button className={styles.logoutButton} disabled={authBusy} onClick={() => void logout()}>{t.logout}</button></div>
     </header>
     <main className={tab === "dishes" || tab === "recipes" ? styles.mainDark : styles.main}>
       <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t.search} aria-label={t.search} />
@@ -201,10 +251,10 @@ export default function App() {
         <input ref={photoInput} type="file" accept="image/*" onChange={handlePhoto} hidden />
       </div>}
       {formMode && <section className={styles.formCard}>
-        <div className={styles.formHead}><h2>{formMode === "recipe" ? t.newRecipe : formMode === "edit-recipe" ? t.editRecipe : t.newDish}</h2><button type="button" aria-label="Close" onClick={resetForm}>×</button></div>
+        <div className={styles.formHead}><h2>{formMode === "recipe" ? t.newRecipe : formMode === "edit-recipe" ? t.editRecipe : formMode === "edit-dish" ? t.editDish : t.newDish}</h2><button type="button" aria-label="Close" onClick={resetForm}>×</button></div>
         <Input value={name} onChange={(event) => setName(event.target.value)} placeholder={t.name} />
         <label className={styles.fieldLabel}>{t.categories}<select className={styles.select} value={section} onChange={(event) => setSection(event.target.value)}>{categoryOptions(formMode === "dish" ? "dish" : "recipe").map((item: Category) => <option key={item.categoryKey} value={item.categoryKey}>{item.names[lang] ?? item.categoryKey}</option>)}</select></label>
-        {formMode === "dish"
+        {formMode === "dish" || formMode === "edit-dish"
           ? <textarea className={styles.textarea} value={components} onChange={(event) => setComponents(event.target.value)} placeholder={t.components} />
           : <><Input value={station} onChange={(event) => setStation(event.target.value)} placeholder={t.station} /><textarea className={styles.textarea} value={ingredients} onChange={(event) => setIngredients(event.target.value)} placeholder="item|amount" /><textarea className={styles.textarea} value={steps} onChange={(event) => setSteps(event.target.value)} placeholder={t.technology} /><textarea className={styles.textarea} value={criticalPoints} onChange={(event) => setCriticalPoints(event.target.value)} placeholder={t.critical} /><textarea className={styles.textarea} value={servingNotes} onChange={(event) => setServingNotes(event.target.value)} placeholder={t.service} /></>}
         <div className={styles.formActions}><button type="button" className={styles.cancelButton} onClick={resetForm}>{t.cancel}</button><button type="button" className={styles.saveButton} disabled={saving || !name.trim()} onClick={() => void save()}>{saving ? "…" : t.save}</button></div>
@@ -213,7 +263,7 @@ export default function App() {
       {tab === "home" && !selectedRecipe && !selectedDish && !q && <section className={styles.hero}><h1>LET’S COOK</h1><p>Recipes, dishes and technology — in one place.</p><div className={styles.tiles}><button className={styles.tile} onClick={() => openTab("dishes")}><strong>{data.menuItems.length}</strong><span>{t.dishes}</span></button><button className={styles.tile} onClick={() => openTab("recipes")}><strong>{data.recipes.length}</strong><span>{t.recipes}</span></button></div></section>}
       {tab === "dishes" && !selectedDish && <section><div className={styles.sectionHead}><div><p className={styles.eyebrow}>{t.categories}</p><h2>{t.dishes}</h2></div><span>{categoryDishes.length}</span></div><div className={styles.chips}><button className={category === "Все" ? styles.chipActive : styles.chip} onClick={() => setCategory("Все")}>{t.all}</button>{categoryOptions("dish").map((item) => <button key={item.categoryKey} className={category === item.categoryKey ? styles.chipActive : styles.chip} onClick={() => setCategory(item.categoryKey)}>{item.names[lang] ?? item.categoryKey}</button>)}</div><div className={styles.list}>{categoryDishes.map((dish) => { const translated = tr(dish); return <button key={dish.id} className={styles.card} onClick={() => setSelectedDish(dish)}><span>{translated.section}</span><strong>{translated.name}</strong><small>{(translated.components ?? dish.components).length} · {t.components.toLowerCase()}</small></button>; })}</div><button className={styles.categoryPrint} onClick={() => setPrintMode("category")}>🖨 {t.print}</button></section>}
       {tab === "recipes" && !selectedRecipe && <section><div className={styles.sectionHead}><div><p className={styles.eyebrow}>{t.categories}</p><h2>{t.recipes}</h2></div><span>{categoryRecipes.length}</span></div><div className={styles.chips}><button className={category === "Все" ? styles.chipActive : styles.chip} onClick={() => setCategory("Все")}>{t.all}</button>{categoryOptions("recipe").map((item) => <button key={item.categoryKey} className={category === item.categoryKey ? styles.chipActive : styles.chip} onClick={() => setCategory(item.categoryKey)}>{item.names[lang] ?? item.categoryKey}</button>)}</div><div className={styles.list}>{categoryRecipes.map((recipe) => { const translated = tr(recipe); return <button key={recipe.id} className={styles.card} onClick={() => setSelectedRecipe(recipe)}><span>{translated.section}{translated.station ? ` · ${translated.station}` : ""}</span><strong>{translated.name}</strong><small>{(translated.ingredients ?? recipe.ingredients).length} · {t.ingredients.toLowerCase()} · {(translated.steps ?? recipe.steps).length}</small></button>; })}</div><button className={styles.categoryPrint} onClick={() => setPrintMode("category")}>🖨 {t.print}</button></section>}
-      {selectedDish && dishView && <section className={styles.detail}><Button onClick={back}>{t.back}</Button><p className={styles.eyebrow}>{dishView.section}</p><h1>{dishView.name}</h1><h3>{t.components}</h3>{(dishView.components ?? selectedDish.components).map((item, index) => <div className={styles.component} key={index}>{item}</div>)}<div className={styles.detailActions}><button onClick={() => setPrintMode("current")}>🖨 {t.print}</button><button onClick={() => void remove("dish", selectedDish.id)}>{t.delete}</button></div></section>}
+      {selectedDish && dishView && <section className={styles.detail}><Button onClick={back}>{t.back}</Button><p className={styles.eyebrow}>{dishView.section}</p><h1>{dishView.name}</h1><h3>{t.components}</h3>{(dishView.components ?? selectedDish.components).map((item, index) => <div className={styles.component} key={index}>{item}</div>)}<div className={styles.detailActions}><button onClick={() => setPrintMode("current")}>🖨 {t.print}</button><button onClick={() => beginEditDish(selectedDish)}>✎ {t.editDish}</button><button onClick={() => void remove("dish", selectedDish.id)}>{t.delete}</button></div></section>}
       {selectedRecipe && recipeView && <section className={styles.detail}><Button onClick={back}>{t.back}</Button><p className={styles.eyebrow}>{recipeView.section}{recipeView.station ? ` · ${recipeView.station}` : ""}</p><h1>{recipeView.name}</h1><h3>{t.ingredients}</h3>{(recipeView.ingredients ?? selectedRecipe.ingredients).map((item, index) => <div className={styles.row} key={index}><span>{item.item}</span><b>{item.amount}</b></div>)}<h3>{t.technology}</h3>{(recipeView.steps ?? selectedRecipe.steps).map((step, index) => <div className={styles.step} key={index}><b>{index + 1}</b><span>{step}</span></div>)}{(recipeView.criticalPoints ?? selectedRecipe.criticalPoints).length > 0 && <><h3>{t.critical}</h3>{(recipeView.criticalPoints ?? selectedRecipe.criticalPoints).map((item, index) => <div className={styles.component} key={index}>• {item}</div>)}</>}{recipeView.servingNotes && <><h3>{t.service}</h3><div className={styles.serviceNote}>{recipeView.servingNotes}</div></>}<div className={styles.detailActions}><button onClick={() => setPrintMode("current")}>🖨 {t.print}</button><button onClick={() => beginEditRecipe(selectedRecipe)}>✎ {t.editRecipe}</button><button onClick={() => void remove("recipe", selectedRecipe.id)}>{t.delete}</button></div></section>}
     </main>
   </div>;

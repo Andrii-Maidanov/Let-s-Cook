@@ -40,6 +40,13 @@ export const menuItemCreateSchema = z.object({
   week: z.string().nullable().optional(),
 }).strict();
 
+export const loginSchema = z.object({
+  email: z.email().max(255),
+  password: z.string().min(1).max(1024),
+}).strict();
+
+export const menuItemUpdateSchema = menuItemCreateSchema.partial().strict();
+
 export const collectionQuerySchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),

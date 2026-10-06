@@ -2,6 +2,14 @@ export type Language = "cs" | "ru" | "uk" | "en";
 export type ItemKind = "recipe" | "dish";
 export type UserRole = "admin" | "user";
 
+export interface AuthUser {
+  id: number;
+  email: string;
+  displayName: string;
+  avatarUrl: string | null;
+  role: UserRole;
+}
+
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 export type JsonObject = { [key: string]: JsonValue };
 
@@ -127,3 +135,5 @@ export interface DishInput {
   translations?: TranslationMap;
   photoUrl?: string | null;
 }
+
+export type DishUpdateInput = Partial<DishInput>;

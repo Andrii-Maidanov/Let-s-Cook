@@ -1,13 +1,16 @@
-import type { AppData, Category, Dish, DishInput, ItemKind, Recipe, RecipeInput, Translation } from "../types";
+import type { AppData, AuthUser, Category, Dish, DishInput, ItemKind, Recipe, RecipeInput, Translation } from "../types";
 
 /**
  * Browser-side API boundary. The implementation is now the independent /api
  * service; photo recognition and automatic translation remain explicit stubs.
  */
 export interface AppBackend {
-  load(): Promise<AppData>;
+  currentSession(): Promise<AuthUser | null>;
+  login(email: string, password: string): Promise<AuthUser>;
+  logout(): Promise<void>;
+  load(search?: string, category?: string): Promise<AppData>;
   saveRecipe(input: RecipeInput, id?: string): Promise<Recipe>;
-  saveDish(input: DishInput): Promise<Dish>;
+  saveDish(input: DishInput, id?: string): Promise<Dish>;
   deleteItem(kind: ItemKind, id: string): Promise<void>;
   translateAll(): Promise<{ translated: number }>;
   recipeFromPhoto(file: File): Promise<{ recipe: RecipeInput; note: string }>;
@@ -16,6 +19,7 @@ export interface AppBackend {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
+    credentials: "same-origin",
     headers: { "Content-Type": "application/json", ...init?.headers },
   });
   if (!response.ok) {
@@ -27,11 +31,36 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const appBackend: AppBackend = {
-  async load() {
+  async currentSession() {
+    const result = await request<{ user: AuthUser | null }>("/api/auth/session");
+    return result.user;
+  },
+  async login(email, password) {
+    const result = await request<{ user: AuthUser }>("/api/auth/login", {
+      method: "POST", body: JSON.stringify({ email, password }),
+    });
+    return result.user;
+  },
+  async logout() {
+    await request<void>("/api/auth/logout", { method: "POST" });
+  },
+  async load(search, category) {
+    const query = new URLSearchParams();
+    if (search) query.set("q", search);
+    if (category) query.set("category", category);
+    const categoriesQuery = request<Category[]>("/api/categories");
+    if (search) {
+      const [result, categories] = await Promise.all([
+        request<{ recipes: Recipe[]; menuItems: Dish[] }>(`/api/search?${query.toString()}`),
+        categoriesQuery,
+      ]);
+      return { recipes: result.recipes, menuItems: result.menuItems, categories };
+    }
+    const collectionQuery = category ? `?category=${encodeURIComponent(category)}` : "";
     const [recipes, menuItems, categories] = await Promise.all([
-      request<Recipe[]>("/api/recipes"),
-      request<Dish[]>("/api/menu-items"),
-      request<Category[]>("/api/categories"),
+      request<Recipe[]>(`/api/recipes${collectionQuery}`),
+      request<Dish[]>(`/api/menu-items${collectionQuery}`),
+      categoriesQuery,
     ]);
     return { recipes, menuItems, categories };
   },
@@ -41,8 +70,10 @@ export const appBackend: AppBackend = {
       body: JSON.stringify(input),
     });
   },
-  saveDish(input) {
-    return request<Dish>("/api/menu-items", { method: "POST", body: JSON.stringify(input) });
+  saveDish(input, id) {
+    return request<Dish>(id ? `/api/menu-items/${encodeURIComponent(id)}` : "/api/menu-items", {
+      method: id ? "PATCH" : "POST", body: JSON.stringify(input),
+    });
   },
   async deleteItem(kind, id) {
     await request<void>(`/api/${kind === "recipe" ? "recipes" : "menu-items"}/${encodeURIComponent(id)}`, { method: "DELETE" });
@@ -74,15 +105,3 @@ export function sourceTranslation(item: Recipe | Dish): Translation {
   }
   return { name: item.name, ...(item.section ? { section: item.section } : {}), components: item.components };
 }
-
-export const mockAdminSession = {
-  get(): boolean {
-    return localStorage.getItem("lets-cook.preview-session") !== "signed-out";
-  },
-  async logout(): Promise<void> {
-    localStorage.setItem("lets-cook.preview-session", "signed-out");
-  },
-  async continuePreview(): Promise<void> {
-    localStorage.removeItem("lets-cook.preview-session");
-  },
-};

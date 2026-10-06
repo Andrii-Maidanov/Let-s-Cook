@@ -44,7 +44,8 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, request, respo
     : undefined;
 
   if (status >= 500) {
-    console.error("[api]", request.method, request.path, databaseCode ?? "error", error instanceof Error ? error.message : "Unknown error");
+    const errorKind = error instanceof Error ? error.name : typeof error;
+    console.error("[api]", request.method, request.path, databaseCode ?? errorKind);
   }
   response.status(status).json({ error: message });
 };

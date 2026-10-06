@@ -18,10 +18,10 @@ create replacement recipes or silently seed application tables.
    existing public tables, and copies it temporarily into the database
    container. It never rewrites the backup.
 3. Start the API and Vite frontend together: `pnpm dev`.
-4. Check the imported row counts and representative API calls:
-   `pnpm db:verify`. This compares recipes, menu items, and categories to
-   counts computed from the dump, then checks ID lookup, name search, and
-   category filtering using real imported rows.
+4. Verify all database row counts against the dump with `pnpm db:verify`.
+5. Start the API, then run `pnpm auth:verify`. It prompts for the existing
+   admin password with hidden input, tests authentication and authenticated
+   recipe/menu-item CRUD, then removes the temporary test records.
 
 PostgreSQL uses a named Docker volume. To import the dump again, use a fresh
 volume; the restore script intentionally will not drop existing application
@@ -37,15 +37,17 @@ original dump's owner and ACL statements.
 - `DELETE /api/recipes/:id`
 - `GET /api/menu-items?search=&category=`
 - `GET /api/menu-items/:id`
-- `POST /api/menu-items` and `DELETE /api/menu-items/:id`
+- `POST /api/menu-items`, `PUT`/`PATCH /api/menu-items/:id`, and
+  `DELETE /api/menu-items/:id`
 - `GET /api/categories?kind=recipe|dish`
 - `GET /api/search?q=...`
 - `GET /api/health`
+- `POST /api/auth/login`, `GET /api/auth/session`, `POST /api/auth/logout`
 
 Database connection, repository queries, route handlers, Zod validation, and
-HTTP error handling live in separate modules. User, session, and password
-tables are retained in PostgreSQL, but production authentication is not
-implemented and password hashes are never returned by these routes. The
-frontend logout remains a local preview action until an auth provider is
-selected. Photo recognition and automatic translation have provider
-interfaces only; no AI provider is configured.
+HTTP error handling live in separate modules. Authentication verifies the
+existing bcrypt hash, stores opaque random sessions in `public.sessions`, and
+sets an HTTP-only, SameSite cookie. User profiles returned by the API omit
+password hashes and session identifiers. Catalog reads require a valid
+session; all writes require the admin role. Photo recognition and automatic
+translation have provider interfaces only; no AI provider is configured.

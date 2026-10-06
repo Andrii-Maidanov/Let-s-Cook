@@ -1,6 +1,6 @@
 import type { QueryResultRow } from "pg";
 import { pool } from "./pool";
-import type { Category, Dish, DishInput, ItemKind, Recipe, RecipeInput } from "../../src/types";
+import type { Category, Dish, DishInput, DishUpdateInput, ItemKind, Recipe, RecipeInput } from "../../src/types";
 
 const recipeColumns = `
   id, name, section, station, ingredients, steps,
@@ -165,6 +165,35 @@ export async function createMenuItem(input: DishInput): Promise<Dish> {
     ],
   );
   return result.rows[0] as Dish;
+}
+
+const dishUpdateColumns: Record<keyof DishInput, string> = {
+  name: "name",
+  section: "section",
+  components: "components",
+  week: "week",
+  translations: "translations",
+  photoUrl: "photo_url",
+};
+
+const jsonDishFields = new Set<keyof DishInput>(["components", "translations"]);
+
+export async function updateMenuItem(id: string, input: DishUpdateInput): Promise<Dish | null> {
+  const keys = Object.keys(input) as (keyof DishInput)[];
+  if (keys.length === 0) return getMenuItem(id);
+  const values: unknown[] = [id];
+  const assignments = keys.map((key) => {
+    values.push(jsonDishFields.has(key) ? JSON.stringify(input[key]) : input[key]);
+    const placeholder = `$${values.length}${jsonDishFields.has(key) ? "::jsonb" : ""}`;
+    return `${dishUpdateColumns[key]} = ${placeholder}`;
+  });
+  values.push(new Date().toISOString());
+  assignments.push(`updated_at = $${values.length}`);
+  const result = await pool.query<QueryResultRow>(
+    `UPDATE public.menu_items SET ${assignments.join(", ")} WHERE id = $1 RETURNING ${menuItemColumns}`,
+    values,
+  );
+  return (result.rows[0] as Dish | undefined) ?? null;
 }
 
 export async function deleteMenuItem(id: string): Promise<boolean> {

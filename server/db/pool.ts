@@ -14,5 +14,5 @@ export const pool = new Pool({
 pool.on("error", (error) => {
   // Do not print query parameters or row data from this connection.
   const code = "code" in error ? String(error.code) : error.name;
-  console.error("[postgres] idle client error:", code, error.message);
+  console.error("[postgres] idle client error:", code);
 });

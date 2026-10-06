@@ -3,6 +3,7 @@ import { createRecipe, deleteRecipe, getRecipe, listRecipes, updateRecipe } from
 import { asyncHandler, HttpError } from "../middleware/errors";
 import { pathId } from "./params";
 import { collectionQuerySchema, recipeCreateSchema, recipeUpdateSchema } from "../validation/schemas";
+import { requireAdmin } from "../auth/middleware";
 
 export const recipesRouter = Router();
 
@@ -17,26 +18,26 @@ recipesRouter.get("/:id", asyncHandler(async (request, response) => {
   response.json(recipe);
 }));
 
-recipesRouter.post("/", asyncHandler(async (request, response) => {
+recipesRouter.post("/", requireAdmin, asyncHandler(async (request, response) => {
   const input = recipeCreateSchema.parse(request.body);
   response.status(201).json(await createRecipe(input));
 }));
 
-recipesRouter.put("/:id", asyncHandler(async (request, response) => {
+recipesRouter.put("/:id", requireAdmin, asyncHandler(async (request, response) => {
   const input = recipeUpdateSchema.parse(request.body);
   const recipe = await updateRecipe(pathId(request), input);
   if (!recipe) throw new HttpError(404, "Recipe not found");
   response.json(recipe);
 }));
 
-recipesRouter.patch("/:id", asyncHandler(async (request, response) => {
+recipesRouter.patch("/:id", requireAdmin, asyncHandler(async (request, response) => {
   const input = recipeUpdateSchema.parse(request.body);
   const recipe = await updateRecipe(pathId(request), input);
   if (!recipe) throw new HttpError(404, "Recipe not found");
   response.json(recipe);
 }));
 
-recipesRouter.delete("/:id", asyncHandler(async (request, response) => {
+recipesRouter.delete("/:id", requireAdmin, asyncHandler(async (request, response) => {
   if (!await deleteRecipe(pathId(request))) throw new HttpError(404, "Recipe not found");
   response.status(204).end();
 }));

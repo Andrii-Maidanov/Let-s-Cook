@@ -11,9 +11,11 @@
     "typecheck": "tsc --noEmit && tsc -p server/tsconfig.json --noEmit",
     "db:up": "docker compose up -d postgres",
     "db:restore": "powershell -ExecutionPolicy Bypass -File scripts/restore-database.ps1",
-    "db:verify": "powershell -ExecutionPolicy Bypass -File scripts/verify-database.ps1"
+    "db:verify": "powershell -ExecutionPolicy Bypass -File scripts/verify-database.ps1",
+    "auth:verify": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/auth-api-smoke.ps1"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
     "pg": "^8.23.1",

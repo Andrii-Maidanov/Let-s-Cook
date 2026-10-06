@@ -4,6 +4,8 @@ import { errorHandler, HttpError, notFoundHandler } from "./middleware/errors";
 import { catalogRouter } from "./routes/catalog";
 import { menuItemsRouter } from "./routes/menuItems";
 import { recipesRouter } from "./routes/recipes";
+import { authRouter } from "./routes/auth";
+import { requireAuthentication } from "./auth/middleware";
 
 export const app = express();
 app.disable("x-powered-by");
@@ -18,6 +20,8 @@ app.get("/api/health", async (_request, response) => {
   }
 });
 
+app.use("/api/auth", authRouter);
+app.use("/api", requireAuthentication);
 app.use("/api", catalogRouter);
 app.use("/api/recipes", recipesRouter);
 app.use("/api/menu-items", menuItemsRouter);

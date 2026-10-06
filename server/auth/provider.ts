@@ -1,7 +1,4 @@
-/**
- * Production authentication is intentionally not configured in this stage.
- * Future providers can implement this boundary without changing recipe routes.
- */
+/** Safe authenticated user projection; never includes password hashes or session IDs. */
 export interface AuthenticatedUser {
   id: number;
   email: string;
@@ -10,6 +7,6 @@ export interface AuthenticatedUser {
 }
 
 export interface AuthProvider {
-  authenticate(authorizationHeader: string | undefined): Promise<AuthenticatedUser | null>;
-  logout(sessionId: string): Promise<void>;
+  authenticate(sessionCookie: string | null): Promise<AuthenticatedUser | null>;
+  logout(sessionCookie: string | null): Promise<void>;
 }

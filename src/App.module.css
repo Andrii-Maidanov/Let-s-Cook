@@ -70,7 +70,7 @@
 .printArea{display:none}
 .searchResults{margin-top:8px}
 .signedOut{min-height:100vh;display:grid;place-items:center;padding:24px;background:#0d0d0d;color:#f5f5f5}
-.loginCard{width:min(440px,100%);padding:30px;border:1px solid #303030;border-radius:20px;background:#141414}
+.loginCard{width:min(440px,100%);padding:30px;border:1px solid #303030;border-radius:20px;background:#141414;display:grid;gap:12px;box-sizing:border-box}
 .loginCard h1{font-size:24px;margin:28px 0 8px}
 .loginCard p{color:#aaa;font-size:13px;line-height:1.5;margin-bottom:24px}
 @media(max-width:520px){.nav>button{min-width:58px}.languageSelect{margin-left:3px;padding:5px 5px}.logo{font-size:25px}.logo span:last-child{margin-top:10px}.count{display:none}.main,.mainDark{padding:12px 13px 34px}.hero h1{font-size:46px}.detail h1{font-size:38px}.headerRight{gap:5px}.logoutButton,.translateButton{padding:7px 8px}}
