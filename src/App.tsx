@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "./components/Button";
 import { Input } from "./components/Input";
-import { appBackend, fallbackCategories, mockAdminSession, sourceTranslation } from "./services/backend";
+import { appBackend, mockAdminSession, sourceTranslation } from "./services/backend";
 import type { AppData, Category, Dish, DishInput, Ingredient, ItemKind, Language, Recipe, RecipeInput, Translation } from "./types";
 import styles from "./App.module.css";
 
@@ -16,7 +16,7 @@ const UI: Record<Language, Record<string, string>> = {
 };
 
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-const emptyData: AppData = { recipes: [], menuItems: [], categories: fallbackCategories };
+const emptyData: AppData = { recipes: [], menuItems: [], categories: [] };
 
 export default function App() {
   const [signedIn, setSignedIn] = useState(() => mockAdminSession.get());
@@ -69,9 +69,9 @@ export default function App() {
     setTab(next); setCategory("Все"); setSelectedDish(null); setSelectedRecipe(null); resetForm();
   };
   const beginEditRecipe = (recipe: Recipe) => {
-    setFormMode("edit-recipe"); setName(recipe.name); setSection(recipe.section); setStation(recipe.station);
+    setFormMode("edit-recipe"); setName(recipe.name); setSection(recipe.section ?? "Dezerty"); setStation(recipe.station ?? "");
     setIngredients(recipe.ingredients.map((item) => `${item.item}|${item.amount}`).join("\n"));
-    setSteps(recipe.steps.join("\n")); setCriticalPoints(recipe.criticalPoints.join("\n")); setServingNotes(recipe.servingNotes);
+    setSteps(recipe.steps.join("\n")); setCriticalPoints(recipe.criticalPoints.join("\n")); setServingNotes(recipe.servingNotes ?? "");
   };
   const handlePhoto = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]; event.target.value = "";
@@ -80,7 +80,7 @@ export default function App() {
     setPhotoBusy(true); setError("");
     try {
       const draft = await appBackend.recipeFromPhoto(file);
-      setFormMode("recipe"); setName(draft.recipe.name); setSection(draft.recipe.section); setStation(draft.recipe.station);
+      setFormMode("recipe"); setName(draft.recipe.name); setSection(draft.recipe.section ?? "Dezerty"); setStation(draft.recipe.station ?? "");
       setIngredients(""); setSteps(""); setCriticalPoints(""); setServingNotes("");
       setError(draft.note);
     } catch (reason) {
@@ -95,14 +95,14 @@ export default function App() {
       if (formMode === "recipe" || formMode === "edit-recipe") {
         const old = formMode === "edit-recipe" ? selectedRecipe : null;
         const input: RecipeInput = {
-          id: old?.id, name: name.trim(), section, station: station.trim(),
+          name: name.trim(), section, station: station.trim(),
           ingredients: ingredients.split("\n").filter(Boolean).map((line): Ingredient => { const [item, ...amount] = line.split("|"); return { item: item.trim(), amount: amount.join("|").trim() }; }),
           steps: steps.split("\n").map((line) => line.trim()).filter(Boolean),
           criticalPoints: criticalPoints.split("\n").map((line) => line.trim()).filter(Boolean),
           servingNotes: servingNotes.trim(), translations: old?.translations ?? {}, photoUrl: old?.photoUrl ?? null,
         };
-        const saved = await appBackend.saveRecipe(input);
-        setData((current) => ({ ...current, recipes: input.id ? current.recipes.map((item) => item.id === saved.id ? saved : item) : [...current.recipes, saved] }));
+        const saved = await appBackend.saveRecipe(input, old?.id);
+        setData((current) => ({ ...current, recipes: old ? current.recipes.map((item) => item.id === saved.id ? saved : item) : [...current.recipes, saved] }));
         setSelectedRecipe(saved); setSelectedDish(null); setTab("recipes"); setFormMode(null);
       } else {
         const input: DishInput = {
@@ -111,7 +111,7 @@ export default function App() {
           translations: {}, photoUrl: null,
         };
         const saved = await appBackend.saveDish(input);
-        setData((current) => ({ ...current, menuItems: input.id ? current.menuItems.map((item) => item.id === saved.id ? saved : item) : [...current.menuItems, saved] }));
+        setData((current) => ({ ...current, menuItems: [...current.menuItems, saved] }));
         setSelectedDish(saved); setSelectedRecipe(null); setTab("dishes"); setFormMode(null);
       }
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Save failed"); }

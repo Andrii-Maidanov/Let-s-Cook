@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-lets_cook}
+      POSTGRES_USER: ${POSTGRES_USER:-letscook_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-letscook_local_dev}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - lets_cook_pgdata:/var/lib/postgresql
+      - ./server/sql/01-restore-roles.sql:/docker-entrypoint-initdb.d/01-restore-roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-letscook_admin} -d ${POSTGRES_DB:-lets_cook}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  lets_cook_pgdata:

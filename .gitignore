@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .pnpm-store/
+.env
+.env.local
 *.tsbuildinfo
 .DS_Store
 Thumbs.db
